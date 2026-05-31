@@ -1,0 +1,36 @@
+{
+  "name": "shrinkvideo",
+  "version": "0.1.0",
+  "description": "ShrinkVideo — local video/image compression (CLI + macOS app), based on ShrinkMaster",
+  "type": "commonjs",
+  "main": "cli/index.js",
+  "bin": {
+    "shrinkvideo": "cli/index.js"
+  },
+  "scripts": {
+    "start:app": "echo \"Electron app not wired yet (Phase 4). Use: shrinkvideo doctor\" && exit 1",
+    "test": "node --test tests/*.test.js",
+    "doctor": "node cli/index.js doctor"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "video",
+    "compression",
+    "ffmpeg",
+    "hermes",
+    "shrinkmaster"
+  ],
+  "author": "Aaron X AI",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aaron-x-ai/shrinkvideo.git"
+  },
+  "dependencies": {
+    "commander": "^13.1.0",
+    "yaml": "^2.8.0"
+  },
+  "devDependencies": {}
+}

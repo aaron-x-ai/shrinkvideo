@@ -1,0 +1,10 @@
+{
+  "type": "workspace_readwrite",
+  "additionalReadwritePaths": [
+    "/Users/mac/Documents/ai_work/aaronxai-shrinkvideo"
+  ],
+  "networkPolicy": {
+    "default": "allow"
+  },
+  "enableSharedBuildCache": true
+}

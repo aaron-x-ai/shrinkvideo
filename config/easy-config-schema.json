@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ShrinkVideo",
+  "type": "object",
+  "properties": {
+    "default_codec": {
+      "type": "string",
+      "title": "默认视频编码",
+      "enum": ["auto", "hevc_videotoolbox", "libx265", "libsvtav1", "libaom-av1"],
+      "default": "auto"
+    },
+    "default_quality": {
+      "type": "string",
+      "title": "画质/体积平衡",
+      "enum": ["best", "balanced", "smallest"],
+      "default": "balanced"
+    },
+    "job_enabled": {
+      "type": "boolean",
+      "title": "启用批处理任务",
+      "default": false
+    },
+    "job_title": {
+      "type": "string",
+      "title": "任务名称",
+      "default": "默认批处理"
+    },
+    "input_dir": {
+      "type": "string",
+      "title": "输入目录",
+      "minLength": 1
+    },
+    "output_dir": {
+      "type": "string",
+      "title": "输出目录",
+      "minLength": 1
+    },
+    "glob": {
+      "type": "string",
+      "title": "文件匹配",
+      "default": "*.{mp4,mov,mkv,heic,jpg,jpeg,png}"
+    },
+    "include_images": {
+      "type": "boolean",
+      "title": "包含图片",
+      "default": true
+    },
+    "schedule_enabled": {
+      "type": "boolean",
+      "title": "启用定时（需自行配置 launchd/cron）",
+      "default": false
+    },
+    "schedule_cron": {
+      "type": "string",
+      "title": "Cron 表达式",
+      "default": "0 2 * * *"
+    }
+  },
+  "required": ["input_dir", "output_dir"],
+  "additionalProperties": false,
+  "x-easy-config": {
+    "version": 1,
+    "writeTarget": "~/.config/shrinkvideo/config.yaml",
+    "format": "yaml",
+    "fieldPaths": {
+      "default_codec": ["defaults", "codec"],
+      "default_quality": ["defaults", "quality"],
+      "job_enabled": ["jobs", 0, "enabled"],
+      "job_title": ["jobs", 0, "title"],
+      "input_dir": ["jobs", 0, "input_dir"],
+      "output_dir": ["jobs", 0, "output_dir"],
+      "glob": ["jobs", 0, "glob"],
+      "include_images": ["jobs", 0, "include_images"],
+      "schedule_enabled": ["jobs", 0, "schedule", "enabled"],
+      "schedule_cron": ["jobs", 0, "schedule", "cron"]
+    },
+    "ui": {
+      "input_dir": {
+        "widget": "directory",
+        "help": "待压缩文件所在文件夹（绝对路径或 ~/）"
+      },
+      "output_dir": {
+        "widget": "directory",
+        "help": "压缩后输出文件夹；勿与源目录相同"
+      },
+      "glob": {
+        "help": "批处理匹配模式，如 *.mp4 或 *.{mp4,mov}"
+      },
+      "schedule_cron": {
+        "help": "仅作备忘；实际定时请在系统 launchd/cron 中调用 scripts/compress_batch.sh"
+      }
+    },
+    "reloadHint": "请回到 Hermes，发送：执行 shrinkvideo 批处理；或运行 shrinkvideo batch --dry-run"
+  }
+}
