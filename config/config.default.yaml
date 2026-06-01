@@ -3,28 +3,31 @@ version: 1
 defaults:
   codec: auto
   quality: balanced
-  resolution: null
+  # ShrinkMaster 高级设置默认 1080p：1920:-2（见 dev_docs/ShrinkVideo开发实践 §11）
+  resolution: "1920:-2"
   overwrite: false
-  suffix: "_shrunk"
+  suffix: "_s"
+
+# 主场景：原视频放入 staging_dir，飞书/Hermes「开始视频压缩」→ 一次扫描（无目录监听）
+inbox:
+  enabled: true
+  title: 视频压缩中转
+  staging_dir: /Users/mac/Downloads/shrinkvideo_work
+  output_dir: /Users/mac/Downloads/shrinkvideo_work/done
+  glob: "*.{mp4,mov,mkv,avi,webm,m4v,ts,mts}"
+  include_subdirs: false
+  continue_on_error: true
+  after_success: keep
+  archive_subdir: .processed
 
 bin:
   dir: null
 
-jobs:
-  - id: default
-    enabled: false
-    title: 默认批处理（请用 easy-config 或手工编辑开启）
-    input_dir: ~/Downloads
-    output_dir: ~/Downloads/ShrinkVideo
-    glob: "*.{mp4,mov,mkv,heic,jpg,jpeg,png}"
-    include_images: true
-    continue_on_error: true
-    schedule:
-      enabled: false
-      cron: "0 2 * * *"
-    notify: false
+jobs: []
 
 advanced:
   max_parallel: 1
-  keep_metadata: false
+  state_file: ~/.config/shrinkvideo/inbox-state.json
+  min_output_bytes: 65536
+  min_output_ratio: 0.01
   temp_dir: null

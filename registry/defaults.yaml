@@ -1,7 +1,7 @@
 version: 1
-# Documentation-only examples (not loaded at runtime in P0).
-examples:
-  - title: Downloads inbox
-    input_dir: ~/Downloads/VideoInbox
-    output_dir: ~/Downloads/VideoShrunk
-    glob: "*.{mp4,mov}"
+# Documentation-only examples (not loaded at runtime).
+inbox_examples:
+  - title: 视频压缩中转
+    staging_dir: ~/Movies/ShrinkVideo-Inbox
+    output_dir: ~/Movies/ShrinkVideo-Done
+    glob: "*.{mp4,mov,mkv}"

@@ -1,7 +1,9 @@
 {
   "type": "workspace_readwrite",
   "additionalReadwritePaths": [
-    "/Users/mac/Documents/ai_work/aaronxai-shrinkvideo"
+    "/Users/mac/Documents/ai_work/aaronxai-shrinkvideo",
+    "/Users/mac/Documents/ai_work/aaronxai-shrinkvideo/dev_docs",
+    "/Users/mac/Documents/ai_work/aaronxai-shrinkvideo/src_shrinkmaster"
   ],
   "networkPolicy": {
     "default": "allow"

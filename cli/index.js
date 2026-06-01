@@ -38,6 +38,18 @@ app
   });
 
 app
+  .command('run-inbox')
+  .description('Scan staging_dir and compress to output_dir (main Feishu/Hermes flow)')
+  .option('--dry-run', 'List files only, do not encode')
+  .option('--continue-on-error', 'Continue batch on single file failure')
+  .option('--json-lines', 'One JSON object per line; final line is summary')
+  .action(() => {
+    console.error('[shrinkvideo] run-inbox: not implemented (Phase 2)');
+    console.error('Configure inbox.staging_dir and inbox.output_dir in ~/.config/shrinkvideo/config.yaml');
+    process.exit(1);
+  });
+
+app
   .command('compress')
   .description('Compress one video file (Phase 2)')
   .requiredOption('-i, --input <path>', 'Input file (absolute path)')

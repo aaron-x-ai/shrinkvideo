@@ -5,14 +5,23 @@ Local video and image compression for macOS — **CLI for Hermes agents and auto
 - **Repository**: https://github.com/aaron-x-ai/shrinkvideo  
 - **Design docs** (local monorepo): `../dev_docs/产品开发文档_002.md`
 
+## Main workflow (Feishu / Hermes)
+
+1. Configure **staging** and **output** directories (easy-config or `~/.config/shrinkvideo/config.yaml`).
+2. Drop original videos into the **staging** folder.
+3. Say **「开始视频压缩」** in Feishu or Hermes → Agent runs `scripts/run_inbox.sh`.
+4. Compressed files appear in the **output** folder as `*_s.*` (e.g. `clip_s.mp4`). Video only; no images. No folder watcher — trigger by message or cron only.
+
+See `../dev_docs/产品开发文档_002.md` §4.4.
+
 ## Status
 
 | Phase | State |
 |-------|--------|
 | P0 — scaffold | Done |
 | P1 — `core/` extraction | Planned |
-| P2 — CLI MVP | Planned |
-| P3 — easy-config + batch | Planned |
+| P2 — CLI MVP + `run-inbox` | Planned |
+| P3 — easy-config (inbox paths) | Planned |
 | P4 — Electron GUI | Planned |
 
 ## Requirements

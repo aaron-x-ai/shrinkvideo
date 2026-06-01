@@ -3,9 +3,35 @@
   "title": "ShrinkVideo",
   "type": "object",
   "properties": {
+    "inbox_enabled": {
+      "type": "boolean",
+      "title": "启用中转目录工作流",
+      "default": true
+    },
+    "staging_dir": {
+      "type": "string",
+      "title": "中转目录（放入待压缩原视频）",
+      "minLength": 1
+    },
+    "output_dir": {
+      "type": "string",
+      "title": "目标目录（压缩结果输出）",
+      "minLength": 1
+    },
+    "video_glob": {
+      "type": "string",
+      "title": "视频文件匹配（不含图片）",
+      "default": "*.{mp4,mov,mkv,avi,webm,m4v,ts,mts}"
+    },
+    "after_success": {
+      "type": "string",
+      "title": "压缩成功后原文件",
+      "enum": ["keep", "archive", "delete"],
+      "default": "keep"
+    },
     "default_codec": {
       "type": "string",
-      "title": "默认视频编码",
+      "title": "视频编码",
       "enum": ["auto", "hevc_videotoolbox", "libx265", "libsvtav1", "libaom-av1"],
       "default": "auto"
     },
@@ -15,81 +41,47 @@
       "enum": ["best", "balanced", "smallest"],
       "default": "balanced"
     },
-    "job_enabled": {
-      "type": "boolean",
-      "title": "启用批处理任务",
-      "default": false
-    },
-    "job_title": {
+    "default_suffix": {
       "type": "string",
-      "title": "任务名称",
-      "default": "默认批处理"
-    },
-    "input_dir": {
-      "type": "string",
-      "title": "输入目录",
-      "minLength": 1
-    },
-    "output_dir": {
-      "type": "string",
-      "title": "输出目录",
-      "minLength": 1
-    },
-    "glob": {
-      "type": "string",
-      "title": "文件匹配",
-      "default": "*.{mp4,mov,mkv,heic,jpg,jpeg,png}"
-    },
-    "include_images": {
-      "type": "boolean",
-      "title": "包含图片",
-      "default": true
-    },
-    "schedule_enabled": {
-      "type": "boolean",
-      "title": "启用定时（需自行配置 launchd/cron）",
-      "default": false
-    },
-    "schedule_cron": {
-      "type": "string",
-      "title": "Cron 表达式",
-      "default": "0 2 * * *"
+      "title": "输出文件名后缀",
+      "default": "_s"
     }
   },
-  "required": ["input_dir", "output_dir"],
+  "required": ["staging_dir", "output_dir"],
   "additionalProperties": false,
   "x-easy-config": {
     "version": 1,
     "writeTarget": "~/.config/shrinkvideo/config.yaml",
     "format": "yaml",
     "fieldPaths": {
+      "inbox_enabled": ["inbox", "enabled"],
+      "staging_dir": ["inbox", "staging_dir"],
+      "output_dir": ["inbox", "output_dir"],
+      "video_glob": ["inbox", "glob"],
+      "after_success": ["inbox", "after_success"],
       "default_codec": ["defaults", "codec"],
       "default_quality": ["defaults", "quality"],
-      "job_enabled": ["jobs", 0, "enabled"],
-      "job_title": ["jobs", 0, "title"],
-      "input_dir": ["jobs", 0, "input_dir"],
-      "output_dir": ["jobs", 0, "output_dir"],
-      "glob": ["jobs", 0, "glob"],
-      "include_images": ["jobs", 0, "include_images"],
-      "schedule_enabled": ["jobs", 0, "schedule", "enabled"],
-      "schedule_cron": ["jobs", 0, "schedule", "cron"]
+      "default_suffix": ["defaults", "suffix"]
     },
     "ui": {
-      "input_dir": {
+      "staging_dir": {
         "widget": "directory",
-        "help": "待压缩文件所在文件夹（绝对路径或 ~/）"
+        "help": "仅放视频文件；放入后请在飞书/Hermes 说「开始视频压缩」（不会自动监听）"
       },
       "output_dir": {
         "widget": "directory",
-        "help": "压缩后输出文件夹；勿与源目录相同"
+        "help": "压缩结果如 name_s.mp4；勿与中转目录相同"
       },
-      "glob": {
-        "help": "批处理匹配模式，如 *.mp4 或 *.{mp4,mov}"
+      "video_glob": {
+        "help": "仅匹配视频扩展名，不处理图片"
       },
-      "schedule_cron": {
-        "help": "仅作备忘；实际定时请在系统 launchd/cron 中调用 scripts/compress_batch.sh"
+      "after_success": {
+        "help": "keep=保留原文件；archive/delete 见产品开发文档"
+      },
+      "default_suffix": {
+        "help": "默认 _s，生成 vacation_s.mp4"
       }
     },
-    "reloadHint": "请回到 Hermes，发送：执行 shrinkvideo 批处理；或运行 shrinkvideo batch --dry-run"
+    "reloadHint": "已保存。把视频放入中转目录后，在飞书或 Hermes 发送：开始视频压缩"
   }
 }

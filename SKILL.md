@@ -1,8 +1,10 @@
 ---
 name: shrinkvideo
-description: "ShrinkVideo — 本地视频/图片压缩。用户要压缩视频、批量缩小文件、定时压缩目录时使用。必须调用 shrinkvideo CLI，禁止启动 Electron GUI。"
+description: "ShrinkVideo — 仅本地视频压缩（不含图片）。原视频放入中转目录，飞书/Hermes 说「开始视频压缩」后一次扫描压缩，结果命名 *_s.* 写入目标目录。无目录监听。必须 run_inbox.sh，禁止 Electron。"
 version: 0.1.0
 triggers:
+  - "开始视频压缩"
+  - "开始压缩"
   - "压缩视频"
   - "缩小视频"
   - "shrinkvideo"
@@ -17,63 +19,68 @@ metadata:
 
 ## 何时使用
 
-- 用户要：**压缩视频/图片**、**批量缩小**、**定时处理某文件夹**
-- 用户提到：**ShrinkVideo**、**shrinkvideo**
+- 用户说：**开始视频压缩**、**开始压缩**（主场景）
+- 用户已（或即将）把视频放入配置的**中转目录**
+- 用户要改中转目录、目标目录、压缩参数 → easy-config
 
 ## 禁止行为
 
-- **不要** `npm start`、**不要**启动 Electron（无图形会话 / cron 不可用）
-- **不要** 使用相对路径；输入输出用**绝对路径**
-- **不要** 在未执行 `doctor` 前对超大文件重复并行压缩
+- **不要** `npm start`、**不要** Electron
+- **不要** 用 `batch` 代替主场景（除非用户明确多目录 cron）
+- **不要** 在未确认前重复执行 `run_inbox.sh`（避免并行压同一批文件）
+- **不要** 猜测中转/目标路径；从配置或 `doctor --json` 读取
 
-## 工作流（Agent 必须遵守）
+## 主工作流（飞书 / Hermes 口令）
 
-1. 确认 Skill 已安装：
+用户说「**开始视频压缩**」且视频应已在中转目录：
 
-   ```bash
-   hermes skills list | grep shrinkvideo
-   ```
+1. 可选：`bash ~/.hermes/skills/shrinkvideo/scripts/doctor.sh`
 
-2. 环境检查：
-
-   ```bash
-   bash ~/.hermes/skills/shrinkvideo/scripts/doctor.sh
-   ```
-
-   或 `shrinkvideo doctor --json`，解析首行 JSON。
-
-3. **单次压缩**（Phase 2+）：
+2. **必须**执行（稳定入口）：
 
    ```bash
-   shrinkvideo compress --input "/absolute/in.mov" --output "/absolute/out.mp4" --json
+   bash ~/.hermes/skills/shrinkvideo/scripts/run_inbox.sh
    ```
 
-4. **批处理**（Phase 2+，读 `~/.config/shrinkvideo/config.yaml`）：
+3. 可先回复用户：「正在扫描中转目录并压缩，请稍候。」
 
-   ```bash
-   shrinkvideo batch --json-lines
-   ```
+4. 解析 stdout **json-lines**；**以最后一行** `kind":"summary"` 为准汇报：
+   - `processed` / `ok` / `fail`
+   - `output_dir`（目标目录绝对路径）
+   - `total_saved_ratio`（若有）
 
-5. **改配置**（Phase 3+，需已安装 easy-config）：
+5. 若 `processed: 0`：提示用户先把视频放入 **staging_dir**（说明配置中的中转目录路径）。
 
-   ```bash
-   bash ~/.hermes/skills/shrinkvideo/scripts/launch_config_ui.sh
-   ```
+6. 若有失败项：列出失败文件名与 error 摘要。
 
-   从 stdout JSON 取 `url`（含 token）；macOS 通常由 easy-config 本机打开浏览器。
+7. **长视频 / 多文件**：优先 `caffeinate -i bash ~/.hermes/skills/shrinkvideo/scripts/run_inbox.sh`。
 
-6. 向用户报告：`saved_ratio`、`output` 路径；失败时贴 stderr 摘要。
+8. **休眠或中断后**：再发「开始视频压缩」即可；CLI 会删除未完成 `*_s` 并自动重压（不做断点续压）。
+
+## 次工作流：单文件
+
+用户给出单个绝对路径时：
+
+```bash
+shrinkvideo compress --input "/absolute/in.mov" --output "/absolute/out.mp4" --json
+```
+
+## 配置（预置中转目录、目标目录、压缩参数）
+
+```bash
+bash ~/.hermes/skills/shrinkvideo/scripts/launch_config_ui.sh
+```
+
+需已安装 easy-config Skill。保存后提示用户：放入视频 → 再说「开始视频压缩」。
 
 ## 依赖
 
 ```bash
 bash ~/.hermes/skills/shrinkvideo/scripts/install.sh
+hermes skills list | grep shrinkvideo
 ```
-
-- Node.js 20+
-- ffmpeg（`SHRINKVIDEO_BIN_DIR` 或 Skill 内 `bin/`）
 
 ## 安全
 
-- 压缩过程**不上传**文件；仅本地 ffmpeg。
-- 不覆盖源文件；输出路径由用户或 config 指定。
+- 压缩仅本地 ffmpeg，不上传。
+- 默认 **不删除** 中转目录内原文件（`after_success: keep`）。
