@@ -30,12 +30,15 @@ shrinkvideo history                     # ~/.config/shrinkvideo/compress-history
 - `~/.config/shrinkvideo/inbox-state.json` — 每个源文件状态 + **体积/mtime 指纹**（同名新拷贝会识别并重压）
 ```
 
-## Hermes 重装 + 自检
+## Hermes 重装 + 自检（开发维护，monorepo 根）
+
+脚本在 **`../dev_scripts/`**（与 `dev_docs/` 同级，不进 GitHub 产品仓）：
 
 ```bash
-bash scripts/reinstall_and_test.sh              # 交互：保留数据 / 本机|GitHub
-bash scripts/reinstall_and_test.sh --from-local --keep-data
-bash scripts/reinstall_and_test.sh --clean --from-local --smoke   # 含金样压缩冒烟
+cd ..   # aaronxai-shrinkvideo monorepo 根
+bash dev_scripts/reinstall_and_test.sh              # 交互：保留数据 / 本机|GitHub
+bash dev_scripts/reinstall_and_test.sh --from-local --keep-data
+bash dev_scripts/reinstall_and_test.sh --clean --from-local --smoke   # 含金样压缩冒烟
 ```
 
 See `../dev_docs/产品开发文档_002.md` §4.4.
