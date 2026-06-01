@@ -5,7 +5,8 @@ const path = require('path');
 const { resolveBinaries, assertBinaries } = require('./paths');
 const { detectEncoders } = require('./encoders');
 const { loadState, saveState } = require('./inbox-state');
-const { listInboxVideos, resolveOutputPath } = require('./naming');
+const { listInboxVideos } = require('./video');
+const { resolveOutputPath } = require('./naming');
 const { compressOneVideo } = require('./compress-one');
 
 async function runInbox({
