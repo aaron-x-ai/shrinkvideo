@@ -20,18 +20,45 @@ bash scripts/download_ffmpeg_macos.sh   # or ensure bin/ffmpeg exists
 npm install && npm link
 shrinkvideo doctor --json
 shrinkvideo run-inbox --json-lines      # uses ~/.config/shrinkvideo/config.yaml
+shrinkvideo history                     # ~/.config/shrinkvideo/compress-history.log
+```
+
+压缩记录（每次 ok / skipped / failed 追加）：
+
+- `~/.config/shrinkvideo/compress-history.jsonl` — 机器可读
+- `~/.config/shrinkvideo/compress-history.log` — 人类可读一行一条
+- `~/.config/shrinkvideo/inbox-state.json` — 每个源文件状态 + **体积/mtime 指纹**（同名新拷贝会识别并重压）
+```
+
+## Hermes 重装 + 自检
+
+```bash
+bash scripts/reinstall_and_test.sh              # 交互：保留数据 / 本机|GitHub
+bash scripts/reinstall_and_test.sh --from-local --keep-data
+bash scripts/reinstall_and_test.sh --clean --from-local --smoke   # 含金样压缩冒烟
 ```
 
 See `../dev_docs/产品开发文档_002.md` §4.4.
+
+## Easy Config (L2 可编辑)
+
+`easy-config-schema.json` 声明 `compatible: true`，写入 `~/.config/shrinkvideo/config.yaml`。
+
+```bash
+bash scripts/launch_config_ui.sh
+python -m easy_config validate-schema --file ./easy-config-schema.json
+```
+
+页眉应为绿色 **「可配置」**；stdout JSON 含 `"capability": "edit"`。
 
 ## Status
 
 | Phase | State |
 |-------|--------|
 | P0 — scaffold | Done |
-| P1 — `core/` extraction | Planned |
-| P2 — CLI MVP + `run-inbox` | Planned |
-| P3 — easy-config (inbox paths) | Planned |
+| P1 — `core/` | Done |
+| P2 — `run-inbox` | Done |
+| P3 — easy-config L2 | Done |
 | P4 — Electron GUI | Planned |
 
 ## Requirements
@@ -63,7 +90,7 @@ bash scripts/install.sh
 hermes skills list | grep shrinkvideo
 ```
 
-Configure via [easy-config](https://github.com/aaron-x-ai/easy-config) when available (Phase 3).
+配置 UI：`bash scripts/launch_config_ui.sh`（见上文 Easy Config）。
 
 ## Acknowledgments
 

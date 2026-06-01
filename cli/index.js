@@ -7,9 +7,16 @@ const { Command } = require('commander');
 const pkg = require('../package.json');
 const { resolveBinaries, assertBinaries, fileExecutable, PRODUCT_ROOT } = require('../core/paths');
 const { detectEncoders } = require('../core/encoders');
-const { loadConfig, mergeCliCompressFlags, DEFAULT_CONFIG_PATH } = require('../core/config');
-const { compressOneVideo, buildOutputPath } = require('../core/compress-one');
+const {
+  loadConfig,
+  mergeCliCompressFlags,
+  DEFAULT_CONFIG_PATH,
+  expandHome,
+} = require('../core/config');
+const { compressOneVideo } = require('../core/compress-one');
+const { resolveOutputPath } = require('../core/naming');
 const { runInbox } = require('../core/run-inbox');
+const { readHistory, formatHumanLine } = require('../core/history');
 
 const app = new Command();
 
@@ -56,6 +63,33 @@ async function runDoctor(opts) {
     payload.errors.push(err.message);
   }
 
+  try {
+    const { config } = loadConfig();
+    const inbox = config.inbox || {};
+    payload.inbox = {
+      enabled: inbox.enabled !== false,
+      staging_dir: inbox.staging_dir || null,
+      output_dir: inbox.output_dir || null,
+    };
+    if (inbox.enabled === false) {
+      payload.warnings = payload.warnings || [];
+      payload.warnings.push(
+        'inbox.enabled is false; enable in easy-config or config.yaml before run-inbox'
+      );
+    }
+    const staging = expandHome(inbox.staging_dir || '');
+    const output = expandHome(inbox.output_dir || '');
+    if (staging && output && path.resolve(staging) === path.resolve(output)) {
+      payload.status = 'fail';
+      payload.errors.push(
+        'inbox.staging_dir and inbox.output_dir must be different directories'
+      );
+    }
+  } catch (err) {
+    payload.warnings = payload.warnings || [];
+    payload.warnings.push(`config: ${err.message}`);
+  }
+
   emitDoctor(payload, opts);
   process.exit(payload.status === 'ok' ? 0 : 1);
 }
@@ -77,6 +111,11 @@ function emitDoctor(payload, opts) {
     console.log('  best HEVC:', payload.encoders.bestH265.id);
   }
   for (const e of payload.errors) console.log('  error:', e);
+  for (const w of payload.warnings || []) console.log('  warn:', w);
+  if (payload.inbox) {
+    console.log('  inbox.staging_dir:', payload.inbox.staging_dir || '(unset)');
+    console.log('  inbox.output_dir:', payload.inbox.output_dir || '(unset)');
+  }
 }
 
 app
@@ -122,13 +161,21 @@ app
       const { config } = loadConfig(opts.config);
       const flags = mergeCliCompressFlags(config, opts);
       const input = path.resolve(opts.input);
-      const output = opts.output
-        ? path.resolve(opts.output)
-        : buildOutputPath(
-            input,
-            path.dirname(input),
-            flags.suffix
-          );
+      let output;
+      let capture_datetime;
+      if (opts.output) {
+        output = path.resolve(opts.output);
+      } else {
+        const binaries = resolveBinaries({ binDir: config.bin?.dir });
+        assertBinaries(binaries);
+        const resolved = await resolveOutputPath(input, path.dirname(input), {
+          ffprobe: binaries.ffprobe,
+          output_name_template: flags.output_name_template,
+          suffix: flags.suffix,
+        });
+        output = resolved.outputPath;
+        capture_datetime = resolved.datetime;
+      }
 
       const advanced = config.advanced || {};
       const stateFile = advanced.state_file;
@@ -149,7 +196,11 @@ app
         stateFile,
       });
 
-      const out = { ...result, status: result.status === 'skipped' ? 'ok' : result.status };
+      const out = {
+        ...result,
+        status: result.status === 'skipped' ? 'ok' : result.status,
+        capture_datetime: capture_datetime ?? result.capture_datetime,
+      };
       if (opts.json) console.log(JSON.stringify(out));
       else {
         console.log(
@@ -167,6 +218,30 @@ app
       }
       process.exit(err.cancelled ? 3 : 2);
     }
+  });
+
+app
+  .command('history')
+  .description('Show recent compression history (human-readable)')
+  .option('--tail <n>', 'Number of lines', '20')
+  .option('--json-lines', 'Print raw JSONL rows')
+  .option('--config <path>', 'Config path')
+  .action((opts) => {
+    const { config } = loadConfig(opts.config);
+    const { path: histPath, lines } = readHistory(config.advanced || {}, {
+      tail: parseInt(opts.tail, 10) || 20,
+    });
+    if (lines.length === 0) {
+      console.log(`[shrinkvideo] no history yet (${histPath})`);
+      process.exit(0);
+    }
+    if (opts.jsonLines) {
+      for (const row of lines) console.log(JSON.stringify(row));
+    } else {
+      console.log(`[shrinkvideo] history (last ${lines.length}): ${histPath}`);
+      for (const row of lines) console.log(formatHumanLine(row));
+    }
+    process.exit(0);
   });
 
 app

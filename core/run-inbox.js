@@ -5,7 +5,7 @@ const path = require('path');
 const { resolveBinaries, assertBinaries } = require('./paths');
 const { detectEncoders } = require('./encoders');
 const { loadState, saveState } = require('./inbox-state');
-const { listInboxVideos, buildOutputPath } = require('./video');
+const { listInboxVideos, resolveOutputPath } = require('./naming');
 const { compressOneVideo } = require('./compress-one');
 
 async function runInbox({
@@ -51,6 +51,7 @@ async function runInbox({
     quality: defaults.quality,
     resolution: defaults.resolution,
     suffix: defaults.suffix,
+    output_name_template: defaults.output_name_template,
     overwrite: defaults.overwrite,
     signal,
   };
@@ -63,7 +64,15 @@ async function runInbox({
   let totalOutput = 0;
 
   for (const inputPath of inputs) {
-    const outputPath = buildOutputPath(inputPath, outputDir, settings.suffix);
+    const { outputPath, datetime } = await resolveOutputPath(
+      inputPath,
+      outputDir,
+      {
+        ffprobe: binaries.ffprobe,
+        output_name_template: settings.output_name_template,
+        suffix: settings.suffix,
+      }
+    );
 
     if (dryRun) {
       results.push({
@@ -71,11 +80,17 @@ async function runInbox({
         kind: 'file',
         input: inputPath,
         output: outputPath,
+        capture_datetime: datetime,
       });
       continue;
     }
 
-    const lineBase = { kind: 'file', input: inputPath, output: outputPath };
+    const lineBase = {
+      kind: 'file',
+      input: inputPath,
+      output: outputPath,
+      capture_datetime: datetime,
+    };
 
     try {
       const result = await compressOneVideo({

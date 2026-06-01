@@ -164,12 +164,7 @@ function safeUnlink(filePath) {
   }
 }
 
-function buildOutputPath(inputPath, outputDir, suffix) {
-  const ext = path.extname(inputPath);
-  const base = path.basename(inputPath, ext);
-  const suf = suffix || '_shr';
-  return path.join(outputDir, `${base}${suf}${ext}`);
-}
+const { buildOutputPath, resolveOutputPath } = require('./naming');
 
 const VIDEO_EXTENSIONS = new Set([
   '.mp4',
@@ -227,6 +222,7 @@ module.exports = {
   isOutputComplete,
   safeUnlink,
   buildOutputPath,
+  resolveOutputPath,
   listInboxVideos,
   VIDEO_EXTENSIONS,
 };

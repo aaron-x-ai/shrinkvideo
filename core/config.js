@@ -43,6 +43,9 @@ function loadConfig(configPath) {
   if (config.advanced?.state_file) {
     config.advanced.state_file = expandHome(config.advanced.state_file);
   }
+  if (config.advanced?.history_file) {
+    config.advanced.history_file = expandHome(config.advanced.history_file);
+  }
   if (config.inbox?.staging_dir) {
     config.inbox.staging_dir = expandHome(config.inbox.staging_dir);
   }
@@ -82,6 +85,8 @@ function mergeCliCompressFlags(config, flags) {
     quality: flags.quality ?? d.quality ?? 'balanced',
     resolution: flags.resolution ?? d.resolution ?? null,
     suffix: d.suffix ?? '_shr',
+    output_name_template:
+      d.output_name_template ?? '{datetime}_{basename}_shr',
     overwrite: flags.overwrite ?? d.overwrite ?? false,
   };
 }

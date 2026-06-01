@@ -7,6 +7,8 @@ defaults:
   resolution: "1920:-2"
   overwrite: false
   suffix: "_shr"
+  # 成品命名：有拍摄时间 → 20240531_143022_vacation_shr.mov；读不出则 vacation_shr.mov
+  output_name_template: "{datetime}_{basename}_shr"
 
 # 主场景：原视频放入 staging_dir，飞书/Hermes「开始视频压缩」→ 一次扫描（无目录监听）
 inbox:
@@ -28,6 +30,7 @@ jobs: []
 advanced:
   max_parallel: 1
   state_file: ~/.config/shrinkvideo/inbox-state.json
+  history_file: ~/.config/shrinkvideo/compress-history.jsonl
   min_output_bytes: 65536
   min_output_ratio: 0.01
   temp_dir: null

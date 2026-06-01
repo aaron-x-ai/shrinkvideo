@@ -65,13 +65,22 @@ metadata:
 shrinkvideo compress --input "/absolute/in.mov" --output "/absolute/out.mp4" --json
 ```
 
-## 配置（预置中转目录、目标目录、压缩参数）
+## 配置（Easy Config L2 可编辑）
+
+Skill 根目录提供 `easy-config-schema.json`（`compatible: true`），写入 `~/.config/shrinkvideo/config.yaml`。
 
 ```bash
 bash ~/.hermes/skills/shrinkvideo/scripts/launch_config_ui.sh
+# 或：bash ~/.hermes/skills/easy-config/scripts/launch_config_ui.sh --skill shrinkvideo
 ```
 
-需已安装 easy-config Skill。保存后提示用户：放入视频 → 再说「开始视频压缩」。
+需已安装 [easy-config](https://github.com/aaron-x-ai/easy-config) Skill。页眉应为绿色 **「可配置」**；保存后按 `reloadHint`：放入视频 → 飞书/Hermes 说 **「开始视频压缩」**。
+
+校验 schema（开发）：
+
+```bash
+python -m easy_config validate-schema --file ~/.hermes/skills/shrinkvideo/easy-config-schema.json
+```
 
 ## 依赖
 

@@ -9,9 +9,37 @@ const {
   runVideoJob,
   isOutputComplete,
   safeUnlink,
-  buildOutputPath,
 } = require('./video');
-const { getFileRecord, setFileRecord, loadState, saveState } = require('./inbox-state');
+const { resolveOutputPath } = require('./naming');
+const { getFileRecord, setFileRecord, saveState } = require('./inbox-state');
+const { appendHistory } = require('./history');
+const {
+  statInputFingerprint,
+  fingerprintMatches,
+  sourceChangedSinceRecord,
+  inputNewerThanOutput,
+} = require('./input-fingerprint');
+
+function logHistory(advanced, entry) {
+  try {
+    appendHistory(advanced, entry);
+  } catch {
+    /* history must not break compress */
+  }
+}
+
+function recordOkFields(input, fp, extra = {}) {
+  return {
+    status: 'ok',
+    output: extra.output,
+    codec: extra.codec,
+    input_bytes: fp.input_bytes,
+    input_mtime_ms: fp.input_mtime_ms,
+    output_bytes: extra.output_bytes,
+    saved_ratio: extra.saved_ratio,
+    elapsed_sec: extra.elapsed_sec,
+  };
+}
 
 async function compressOneVideo({
   inputPath,
@@ -33,7 +61,8 @@ async function compressOneVideo({
     throw err;
   }
 
-  const inputSize = fs.statSync(input).size;
+  const fp = statInputFingerprint(input);
+  const inputSize = fp.input_bytes;
   const adv = advanced || {};
 
   if (!binaries) {
@@ -49,74 +78,83 @@ async function compressOneVideo({
 
   const record = state ? getFileRecord(state, input) : null;
 
-  const outputIncomplete =
-    output && fs.existsSync(output) && !isOutputComplete(output, inputSize, adv);
+  const outputExists = output && fs.existsSync(output);
+  const outputComplete =
+    outputExists && isOutputComplete(output, inputSize, adv);
+  const outputIncomplete = outputExists && !outputComplete;
+
+  const changedSource = sourceChangedSinceRecord(record, fp);
+  const newerInput =
+    outputExists && inputNewerThanOutput(input, output);
 
   const needsRedo =
     outputIncomplete ||
-    (record &&
-      (record.status === 'failed' || record.status === 'running'));
+    changedSource ||
+    newerInput ||
+    (record && (record.status === 'failed' || record.status === 'running'));
 
-  if (output && fs.existsSync(output)) {
-    if (needsRedo) {
-      safeUnlink(output);
-    } else if (
-      skipIfValid &&
-      !overwrite &&
-      isOutputComplete(output, inputSize, adv) &&
-      record?.status === 'ok'
-    ) {
-      const outputSize = fs.statSync(output).size;
-      return {
-        status: 'skipped',
+  if (outputExists && needsRedo) {
+    safeUnlink(output);
+    output = path.resolve(outputPath);
+  }
+
+  const canSkip =
+    skipIfValid &&
+    !overwrite &&
+    outputComplete &&
+    !needsRedo &&
+    fingerprintMatches(record, fp) &&
+    record?.status === 'ok';
+
+  if (canSkip) {
+    const outputSize = fs.statSync(output).size;
+    const skipped = {
+      status: 'skipped',
+      input,
+      output,
+      input_bytes: inputSize,
+      output_bytes: outputSize,
+      saved_ratio: inputSize ? 1 - outputSize / inputSize : 0,
+      codec: record.codec || codecId,
+      message: 'Output exists; source unchanged (size+mtime)',
+    };
+    logHistory(adv, skipped);
+    return skipped;
+  }
+
+  if (
+    skipIfValid &&
+    !overwrite &&
+    outputComplete &&
+    !needsRedo &&
+    !record
+  ) {
+    const outputSize = fs.statSync(output).size;
+    if (state) {
+      setFileRecord(
+        state,
         input,
-        output,
-        input_bytes: inputSize,
-        output_bytes: outputSize,
-        saved_ratio: inputSize ? 1 - outputSize / inputSize : 0,
-        codec: record.codec || codecId,
-        message: 'Output exists and valid',
-      };
-    } else if (
-      skipIfValid &&
-      !overwrite &&
-      isOutputComplete(output, inputSize, adv) &&
-      !record
-    ) {
-      const outputSize = fs.statSync(output).size;
-      if (state) {
-        setFileRecord(state, input, {
-          status: 'ok',
+        recordOkFields(input, fp, {
           output,
           codec: codecId,
-        });
-        if (stateFile) saveState(stateFile, state);
-      }
-      return {
-        status: 'skipped',
-        input,
-        output,
-        input_bytes: inputSize,
-        output_bytes: outputSize,
-        saved_ratio: inputSize ? 1 - outputSize / inputSize : 0,
-        codec: codecId,
-        message: 'Output exists and valid (no state)',
-      };
-    } else if (!overwrite && isOutputComplete(output, inputSize, adv)) {
-      const outputSize = fs.statSync(output).size;
-      return {
-        status: 'skipped',
-        input,
-        output,
-        input_bytes: inputSize,
-        output_bytes: outputSize,
-        saved_ratio: inputSize ? 1 - outputSize / inputSize : 0,
-        codec: codecId,
-        message: 'Output exists',
-      };
-    } else if (!overwrite && fs.existsSync(output)) {
-      safeUnlink(output);
+          output_bytes: outputSize,
+          saved_ratio: inputSize ? 1 - outputSize / inputSize : 0,
+        })
+      );
+      if (stateFile) saveState(stateFile, state);
     }
+    const skipped = {
+      status: 'skipped',
+      input,
+      output,
+      input_bytes: inputSize,
+      output_bytes: outputSize,
+      saved_ratio: inputSize ? 1 - outputSize / inputSize : 0,
+      codec: codecId,
+      message: 'Output exists and valid (no prior state)',
+    };
+    logHistory(adv, skipped);
+    return skipped;
   }
 
   if (!output) {
@@ -126,7 +164,13 @@ async function compressOneVideo({
   fs.mkdirSync(path.dirname(output), { recursive: true });
 
   if (state) {
-    setFileRecord(state, input, { status: 'running', output, codec: codecId });
+    setFileRecord(state, input, {
+      status: 'running',
+      output,
+      codec: codecId,
+      input_bytes: fp.input_bytes,
+      input_mtime_ms: fp.input_mtime_ms,
+    });
     if (stateFile) saveState(stateFile, state);
   }
 
@@ -140,6 +184,11 @@ async function compressOneVideo({
   };
 
   const args = buildVideoArgs(input, output, encodeSettings);
+  const redoReason = changedSource
+    ? 'source file changed (size/mtime)'
+    : newerInput
+      ? 'source newer than output'
+      : null;
 
   try {
     const { elapsed_sec } = await runVideoJob(binaries.ffmpeg, args, {
@@ -154,6 +203,8 @@ async function compressOneVideo({
           status: 'failed',
           output,
           error: 'Output too small',
+          input_bytes: fp.input_bytes,
+          input_mtime_ms: fp.input_mtime_ms,
         });
         if (stateFile) saveState(stateFile, state);
       }
@@ -162,12 +213,7 @@ async function compressOneVideo({
       throw err;
     }
 
-    if (state) {
-      setFileRecord(state, input, { status: 'ok', output, codec: codecId });
-      if (stateFile) saveState(stateFile, state);
-    }
-
-    return {
+    const okPayload = {
       status: 'ok',
       input,
       output,
@@ -176,7 +222,26 @@ async function compressOneVideo({
       saved_ratio: inputSize ? 1 - outputSize / inputSize : 0,
       elapsed_sec,
       codec: codecId,
+      message: redoReason || undefined,
     };
+
+    if (state) {
+      setFileRecord(
+        state,
+        input,
+        recordOkFields(input, fp, {
+          output,
+          codec: codecId,
+          output_bytes: outputSize,
+          saved_ratio: okPayload.saved_ratio,
+          elapsed_sec,
+        })
+      );
+      if (stateFile) saveState(stateFile, state);
+    }
+
+    logHistory(adv, okPayload);
+    return okPayload;
   } catch (err) {
     safeUnlink(output);
     if (state) {
@@ -184,14 +249,23 @@ async function compressOneVideo({
         status: 'failed',
         output,
         error: err.message,
+        input_bytes: fp.input_bytes,
+        input_mtime_ms: fp.input_mtime_ms,
       });
       if (stateFile) saveState(stateFile, state);
     }
+    logHistory(adv, {
+      status: 'failed',
+      input,
+      output,
+      input_bytes: inputSize,
+      error: err.message,
+    });
     throw err;
   }
 }
 
 module.exports = {
   compressOneVideo,
-  buildOutputPath,
+  resolveOutputPath,
 };
