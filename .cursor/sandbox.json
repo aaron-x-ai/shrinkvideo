@@ -3,7 +3,8 @@
   "additionalReadwritePaths": [
     "/Users/mac/Documents/ai_work/aaronxai-shrinkvideo",
     "/Users/mac/Documents/ai_work/aaronxai-shrinkvideo/dev_docs",
-    "/Users/mac/Documents/ai_work/aaronxai-shrinkvideo/src_shrinkmaster"
+    "/Users/mac/Documents/ai_work/aaronxai-shrinkvideo/src_shrinkmaster",
+    "/Users/mac/Downloads/shrinkvideo_work"
   ],
   "networkPolicy": {
     "default": "allow"

@@ -1,6 +1,6 @@
 ---
 name: shrinkvideo
-description: "ShrinkVideo — 仅本地视频压缩（不含图片）。原视频放入中转目录，飞书/Hermes 说「开始视频压缩」后一次扫描压缩，结果命名 *_s.* 写入目标目录。无目录监听。必须 run_inbox.sh，禁止 Electron。"
+description: "ShrinkVideo — 仅本地视频压缩（不含图片）。原视频放入中转目录，飞书/Hermes 说「开始视频压缩」后一次扫描压缩，结果命名 *_shr.* 写入目标目录。无目录监听。必须 run_inbox.sh，禁止 Electron。"
 version: 0.1.0
 triggers:
   - "开始视频压缩"
@@ -55,7 +55,7 @@ metadata:
 
 7. **长视频 / 多文件**：优先 `caffeinate -i bash ~/.hermes/skills/shrinkvideo/scripts/run_inbox.sh`。
 
-8. **休眠或中断后**：再发「开始视频压缩」即可；CLI 会删除未完成 `*_s` 并自动重压（不做断点续压）。
+8. **休眠或中断后**：再发「开始视频压缩」即可；CLI 会删除未完成 `*_shr` 并自动重压（不做断点续压）。
 
 ## 次工作流：单文件
 

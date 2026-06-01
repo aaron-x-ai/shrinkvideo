@@ -6,7 +6,7 @@ defaults:
   # ShrinkMaster 高级设置默认 1080p：1920:-2（见 dev_docs/ShrinkVideo开发实践 §11）
   resolution: "1920:-2"
   overwrite: false
-  suffix: "_s"
+  suffix: "_shr"
 
 # 主场景：原视频放入 staging_dir，飞书/Hermes「开始视频压缩」→ 一次扫描（无目录监听）
 inbox:

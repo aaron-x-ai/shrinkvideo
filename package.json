@@ -1,7 +1,7 @@
 {
   "name": "shrinkvideo",
   "version": "0.1.0",
-  "description": "ShrinkVideo — local video/image compression (CLI + macOS app), based on ShrinkMaster",
+  "description": "ShrinkVideo — local video compression (CLI + Hermes skill), based on ShrinkMaster",
   "type": "commonjs",
   "main": "cli/index.js",
   "bin": {

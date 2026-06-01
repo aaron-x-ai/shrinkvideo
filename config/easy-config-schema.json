@@ -44,7 +44,7 @@
     "default_suffix": {
       "type": "string",
       "title": "输出文件名后缀",
-      "default": "_s"
+      "default": "_shr"
     }
   },
   "required": ["staging_dir", "output_dir"],
@@ -70,7 +70,7 @@
       },
       "output_dir": {
         "widget": "directory",
-        "help": "压缩结果如 name_s.mp4；勿与中转目录相同"
+        "help": "压缩结果如 name_shr.mp4；勿与中转目录相同"
       },
       "video_glob": {
         "help": "仅匹配视频扩展名，不处理图片"
@@ -79,7 +79,7 @@
         "help": "keep=保留原文件；archive/delete 见产品开发文档"
       },
       "default_suffix": {
-        "help": "默认 _s，生成 vacation_s.mp4"
+        "help": "默认 _shr，生成 vacation_shr.mp4"
       }
     },
     "reloadHint": "已保存。把视频放入中转目录后，在飞书或 Hermes 发送：开始视频压缩"

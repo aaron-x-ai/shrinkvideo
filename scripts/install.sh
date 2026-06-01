@@ -25,9 +25,8 @@ fi
 
 if [[ -z "${SHRINKVIDEO_BIN_DIR:-}" ]] && [[ ! -x "$ROOT/bin/ffmpeg" ]]; then
   echo "[WARN] ffmpeg not found in $ROOT/bin"
-  echo "       Development: export SHRINKVIDEO_BIN_DIR=\"\$(cd \"$ROOT/../src_shrinkmaster\" && pwd)/bin\""
-  echo "       Then run: cd ../src_shrinkmaster && ./download_ffmpeg_macos.sh"
-  echo "       Or copy bin/ from ShrinkMaster after download."
+  echo "       Run: bash \"$ROOT/scripts/download_ffmpeg_macos.sh\""
+  echo "       (Downloads universal2 into shrinkvideo/bin/; requires curl + network)"
 fi
 
 node "$ROOT/cli/index.js" doctor || true

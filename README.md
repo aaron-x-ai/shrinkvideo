@@ -10,7 +10,17 @@ Local video and image compression for macOS — **CLI for Hermes agents and auto
 1. Configure **staging** and **output** directories (easy-config or `~/.config/shrinkvideo/config.yaml`).
 2. Drop original videos into the **staging** folder.
 3. Say **「开始视频压缩」** in Feishu or Hermes → Agent runs `scripts/run_inbox.sh`.
-4. Compressed files appear in the **output** folder as `*_s.*` (e.g. `clip_s.mp4`). Video only; no images. No folder watcher — trigger by message or cron only.
+4. Compressed files appear in the **output** folder as `*_shr.*` (e.g. `clip_shr.mp4`). Video only; no images. No folder watcher — trigger by message or cron only.
+
+## CLI (P0–P2)
+
+```bash
+cd shrinkvideo
+bash scripts/download_ffmpeg_macos.sh   # or ensure bin/ffmpeg exists
+npm install && npm link
+shrinkvideo doctor --json
+shrinkvideo run-inbox --json-lines      # uses ~/.config/shrinkvideo/config.yaml
+```
 
 See `../dev_docs/产品开发文档_002.md` §4.4.
 
