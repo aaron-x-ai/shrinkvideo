@@ -8,6 +8,7 @@ const { loadState, saveState } = require('./inbox-state');
 const { listInboxVideos } = require('./video');
 const { resolveOutputPath } = require('./naming');
 const { compressOneVideo } = require('./compress-one');
+const { assertInboxSetup } = require('./setup');
 
 async function runInbox({
   config,
@@ -15,6 +16,8 @@ async function runInbox({
   continueOnError = true,
   signal,
 }) {
+  assertInboxSetup(config);
+
   const inbox = config.inbox || {};
   if (!inbox.enabled) {
     const err = new Error('inbox.enabled is false');
@@ -24,11 +27,6 @@ async function runInbox({
 
   const stagingDir = inbox.staging_dir;
   const outputDir = inbox.output_dir;
-  if (!stagingDir || !outputDir) {
-    const err = new Error('inbox.staging_dir and inbox.output_dir are required');
-    err.code = 'EINVAL';
-    throw err;
-  }
 
   fs.mkdirSync(stagingDir, { recursive: true });
   fs.mkdirSync(outputDir, { recursive: true });
@@ -150,10 +148,20 @@ async function runInbox({
     ok,
     fail,
     skipped,
+    pending: dryRun ? processed : Math.max(0, processed - ok - skipped - fail),
     staging_dir: stagingDir,
     output_dir: outputDir,
     total_saved_ratio: Math.round(total_saved_ratio * 1000) / 1000,
   };
+
+  if (!dryRun && processed > 0 && ok === 0 && skipped === processed) {
+    summary.hint =
+      'All inputs skipped: valid outputs already in output_dir. Delete done/* or set defaults.overwrite true to recompress.';
+  } else if (!dryRun && ok > 0) {
+    summary.hint = `Compressed ${ok} file(s) to output_dir.`;
+  } else if (dryRun && processed > 0) {
+    summary.hint = `Would process ${processed} file(s); run without --dry-run to encode.`;
+  }
 
   if (fail > 0 && ok === 0 && skipped === 0) summary.status = 'fail';
 

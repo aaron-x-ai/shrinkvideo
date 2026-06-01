@@ -18,7 +18,11 @@ CONFIG_FILE="${CONFIG_DIR}/config.yaml"
 if [[ ! -f "$CONFIG_FILE" ]]; then
   mkdir -p "$CONFIG_DIR"
   cp "$ROOT/config/config.default.yaml" "$CONFIG_FILE"
-  echo "[OK] Created $CONFIG_FILE"
+  echo "[OK] Created $CONFIG_FILE (setup_complete: false)"
+  echo ""
+  node "$ROOT/cli/index.js" setup --welcome 2>/dev/null || true
+  echo ""
+  echo "[NEXT] Run: bash \"$ROOT/scripts/first_setup.sh\"  (confirm 素材/成品 directories)"
 else
   echo "[OK] Config exists: $CONFIG_FILE"
 fi

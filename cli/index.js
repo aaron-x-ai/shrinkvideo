@@ -17,6 +17,14 @@ const { compressOneVideo } = require('../core/compress-one');
 const { resolveOutputPath } = require('../core/naming');
 const { runInbox } = require('../core/run-inbox');
 const { readHistory, formatHumanLine } = require('../core/history');
+const {
+  getSetupStatus,
+  saveInboxSetup,
+  runInteractiveSetup,
+  SetupRequiredError,
+  printFirstRunBriefing,
+  printSetupCompleteRecap,
+} = require('../core/setup');
 
 const app = new Command();
 
@@ -64,25 +72,33 @@ async function runDoctor(opts) {
   }
 
   try {
-    const { config } = loadConfig();
+    const { config, configPath } = loadConfig();
+    const setup = getSetupStatus(config);
+    payload.setup = setup;
+    payload.setup_complete = setup.setup_complete;
+    payload.setup_required = setup.setup_required;
+
     const inbox = config.inbox || {};
     payload.inbox = {
       enabled: inbox.enabled !== false,
-      staging_dir: inbox.staging_dir || null,
-      output_dir: inbox.output_dir || null,
+      staging_dir: setup.resolved_staging_dir || inbox.staging_dir || null,
+      output_dir: setup.resolved_output_dir || inbox.output_dir || null,
     };
+
+    if (setup.setup_required) {
+      payload.status = 'fail';
+      payload.errors.push(
+        'First-run setup required: run shrinkvideo setup or scripts/first_setup.sh'
+      );
+      for (const pe of setup.path_errors || []) {
+        payload.errors.push(pe);
+      }
+    }
+
     if (inbox.enabled === false) {
       payload.warnings = payload.warnings || [];
       payload.warnings.push(
-        'inbox.enabled is false; enable in easy-config or config.yaml before run-inbox'
-      );
-    }
-    const staging = expandHome(inbox.staging_dir || '');
-    const output = expandHome(inbox.output_dir || '');
-    if (staging && output && path.resolve(staging) === path.resolve(output)) {
-      payload.status = 'fail';
-      payload.errors.push(
-        'inbox.staging_dir and inbox.output_dir must be different directories'
+        'inbox.enabled is false; set enabled: true in config.yaml before run-inbox'
       );
     }
   } catch (err) {
@@ -112,11 +128,121 @@ function emitDoctor(payload, opts) {
   }
   for (const e of payload.errors) console.log('  error:', e);
   for (const w of payload.warnings || []) console.log('  warn:', w);
+  if (payload.setup) {
+    console.log('  setup_complete:', payload.setup.setup_complete);
+    console.log('  setup_required:', payload.setup.setup_required);
+  }
   if (payload.inbox) {
     console.log('  inbox.staging_dir:', payload.inbox.staging_dir || '(unset)');
     console.log('  inbox.output_dir:', payload.inbox.output_dir || '(unset)');
   }
 }
+
+app
+  .command('setup')
+  .description('First-run: confirm staging (素材) and output (成品) directories')
+  .option('--status', 'Print setup status and exit')
+  .option('-s, --staging <path>', '素材/中转目录')
+  .option('-o, --output <path>', '成品/输出目录')
+  .option('--confirm', 'Validate paths and set setup_complete')
+  .option('--welcome', 'Print first-run guide only (no directory prompts)')
+  .option('--no-briefing', 'Skip first-run guide text')
+  .option('--json', 'JSON on stdout')
+  .option('--config <path>', 'Config path')
+  .action(async (opts) => {
+    const { config, configPath } = loadConfig(opts.config);
+
+    if (opts.welcome) {
+      if (!opts.json) printFirstRunBriefing({ configPath });
+      else {
+        console.log(
+          JSON.stringify({
+            status: 'ok',
+            kind: 'welcome',
+            message: 'See stdout without --json for full guide',
+          })
+        );
+      }
+      process.exit(0);
+    }
+
+    if (opts.status) {
+      const setup = getSetupStatus(config);
+      if (opts.json) {
+        console.log(JSON.stringify(setup));
+      } else {
+        console.log('[shrinkvideo] setup status');
+        console.log('  setup_complete:', setup.setup_complete);
+        console.log('  setup_required:', setup.setup_required);
+        console.log('  staging_dir:', setup.resolved_staging_dir || '(unset)');
+        console.log('  output_dir:', setup.resolved_output_dir || '(unset)');
+        if (setup.path_errors?.length) {
+          for (const e of setup.path_errors) console.log('  error:', e);
+        }
+      }
+      process.exit(setup.setup_required ? 1 : 0);
+    }
+
+    try {
+      const wasRequired = getSetupStatus(config).setup_required;
+
+      if (opts.staging && opts.output) {
+        if (wasRequired && !opts.noBriefing && !opts.json) {
+          printFirstRunBriefing({ configPath });
+        }
+        const markComplete = opts.confirm === true;
+        const status = saveInboxSetup(configPath, {
+          staging_dir: opts.staging,
+          output_dir: opts.output,
+          markComplete,
+        });
+        if (!markComplete) {
+          if (opts.json) console.log(JSON.stringify({ ...status, saved: true, confirmed: false }));
+          else {
+            console.log('[shrinkvideo] paths saved; run with --confirm to finish setup');
+          }
+          process.exit(0);
+        }
+        if (opts.json) console.log(JSON.stringify(status));
+        else if (!opts.noBriefing) printSetupCompleteRecap(status);
+        process.exit(0);
+      }
+
+      if (opts.confirm) {
+        if (wasRequired && !opts.noBriefing && !opts.json) {
+          printFirstRunBriefing({ configPath });
+        }
+        const inbox = config.inbox || {};
+        const status = saveInboxSetup(configPath, {
+          staging_dir: inbox.staging_dir,
+          output_dir: inbox.output_dir,
+          markComplete: true,
+        });
+        if (opts.json) console.log(JSON.stringify(status));
+        else if (!opts.noBriefing) printSetupCompleteRecap(status);
+        process.exit(0);
+      }
+
+      const inbox = config.inbox || {};
+      const status = await runInteractiveSetup(
+        configPath,
+        {
+          staging: inbox.staging_dir || '',
+          output: inbox.output_dir || '',
+        },
+        { briefing: !opts.noBriefing }
+      );
+      if (opts.json) console.log(JSON.stringify(status));
+      process.exit(0);
+    } catch (err) {
+      if (opts.json) {
+        console.log(JSON.stringify({ status: 'fail', error: err.message, code: err.code }));
+      } else {
+        console.error('[shrinkvideo] setup failed:', err.message);
+      }
+      process.exit(1);
+    }
+  });
 
 app
   .command('doctor')
@@ -288,11 +414,20 @@ app
     } catch (err) {
       process.removeListener('SIGINT', onSig);
       if (opts.jsonLines) {
-        console.log(JSON.stringify({ status: 'fail', error: err.message }));
+        if (err instanceof SetupRequiredError) {
+          console.log(JSON.stringify(err.toJSON()));
+        } else {
+          console.log(JSON.stringify({ status: 'fail', error: err.message, code: err.code }));
+        }
       } else {
         console.error('[shrinkvideo] run-inbox:', err.message);
+        if (err instanceof SetupRequiredError) {
+          console.error('  → run: shrinkvideo setup');
+          console.error('  → or:  bash ~/.hermes/skills/shrinkvideo/scripts/first_setup.sh');
+          console.error('  → read: shrinkvideo setup --welcome');
+        }
       }
-      process.exit(err.code === 'INBOX_DISABLED' ? 1 : 1);
+      process.exit(1);
     }
   });
 

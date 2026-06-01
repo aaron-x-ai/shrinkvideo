@@ -172,6 +172,7 @@ remove_install() {
   if [[ "$KEEP_DATA" -eq 0 ]]; then
     reinstall_msg "删除用户配置: $CONFIG_DIR"
     rm -rf "$CONFIG_DIR"
+    reinstall_msg "注意: 不删除中转/成品目录（Downloads/shrinkvideo_work 与 done/ 需手动清理）"
   else
     reinstall_msg "保留用户数据"
   fi

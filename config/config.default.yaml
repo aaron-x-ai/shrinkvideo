@@ -12,10 +12,12 @@ defaults:
 
 # 主场景：原视频放入 staging_dir，飞书/Hermes「开始视频压缩」→ 一次扫描（无目录监听）
 inbox:
+  setup_complete: false
+  setup_confirmed_at: null
   enabled: true
   title: 视频压缩中转
-  staging_dir: /Users/mac/Downloads/shrinkvideo_work
-  output_dir: /Users/mac/Downloads/shrinkvideo_work/done
+  staging_dir: ""
+  output_dir: ""
   glob: "*.{mp4,mov,mkv,avi,webm,m4v,ts,mts}"
   include_subdirs: false
   continue_on_error: true

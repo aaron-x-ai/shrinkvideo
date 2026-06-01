@@ -87,10 +87,19 @@ async function compressOneVideo({
   const newerInput =
     outputExists && inputNewerThanOutput(input, output);
 
+  const recordOutputGone =
+    record?.status === 'ok' &&
+    record.output &&
+    !fs.existsSync(record.output);
+  const staleOkNoOutput =
+    record?.status === 'ok' && !outputExists;
+
   const needsRedo =
     outputIncomplete ||
     changedSource ||
     newerInput ||
+    recordOutputGone ||
+    staleOkNoOutput ||
     (record && (record.status === 'failed' || record.status === 'running'));
 
   if (outputExists && needsRedo) {
